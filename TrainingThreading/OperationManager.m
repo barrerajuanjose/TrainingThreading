@@ -20,7 +20,7 @@
         
         self.valueLogger = [[ValueLogger alloc] init];
 //        self.concurrentQueue = dispatch_queue_create("com.mercadolibre.operationManager", DISPATCH_QUEUE_CONCURRENT);
-                self.concurrentQueue = dispatch_queue_create("com.mercadolibre.operationManager", DISPATCH_QUEUE_SERIAL);
+                self.concurrentQueue = dispatch_queue_create("com.mercadolibre.operationManager", DISPATCH_QUEUE_CONCURRENT);
     }
     
     return self;
@@ -37,24 +37,22 @@
     
     for (int i = 1 ;i<=valuesToAdd ; i++){
         
-       
+        dispatch_async(self.concurrentQueue, ^(void) {
             [self.valueLogger addValue:[NSString stringWithFormat:@"%i",i]];
-       
-        
-        
+        });
     }
     
-    
-  
-    
-    [self.valueLogger printValuesWithCompletitionBlock:^(NSUInteger valuesCount) {
-        if (valuesCount == valuesToAdd){
-            completionBlock(YES);
-        }
-        else{
-            completionBlock(NO);
-        }
-    }];
+    dispatch_barrier_async(self.concurrentQueue, ^(void) {
+        [self.valueLogger printValuesWithCompletitionBlock:^(NSUInteger valuesCount) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (valuesCount == valuesToAdd){
+                    completionBlock(YES);
+                } else {
+                    completionBlock(NO);
+                }
+            });
+        }];
+     });
         
     
     
